@@ -1,19 +1,32 @@
-import { Link, Outlet, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { Link, Outlet, useNavigate, useParams } from "react-router-dom";
+import { useQuery, useMutation } from "@tanstack/react-query";
 
 import Header from "../Header.jsx";
-import { fetchEvent } from "../../util/http.js";
+import { deleteEvent, fetchEvent, queryClient } from "../../util/http.js";
 import LoadingIndicator from "../UI/LoadingIndicator.jsx";
 import ErrorBlock from "../UI/ErrorBlock.jsx";
 
 export default function EventDetails() {
   const params = useParams();
   const id = params.id;
+  const navigate = useNavigate();
 
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["events", { id: id }],
     queryFn: ({ signal }) => fetchEvent({ id, signal }),
   });
+
+  const { mutate } = useMutation({
+    mutationFn: () => deleteEvent({ id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      navigate("/events");
+    },
+  });
+
+  const deleteHandler = () => {
+    mutate();
+  };
 
   return (
     <>
@@ -34,7 +47,7 @@ export default function EventDetails() {
             </nav>
           </header>
           <div id="event-details-content">
-            <img src="http://localhost:3000/" alt="" />
+            <img src={`http://localhost:3000/${data.image}`} alt="" />
             <div id="event-details-info">
               <div>
                 <p id="event-details-location">{data.location}</p>
