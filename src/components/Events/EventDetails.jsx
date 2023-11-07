@@ -3,7 +3,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 
 import Header from "../Header.jsx";
 import { deleteEvent, fetchEvent, queryClient } from "../../util/http.js";
-import LoadingIndicator from "../UI/LoadingIndicator.jsx";
 import ErrorBlock from "../UI/ErrorBlock.jsx";
 
 export default function EventDetails() {
@@ -17,7 +16,7 @@ export default function EventDetails() {
   });
 
   const { mutate } = useMutation({
-    mutationFn: () => deleteEvent({ id }),
+    mutationFn: deleteEvent,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
       navigate("/events");
@@ -25,8 +24,59 @@ export default function EventDetails() {
   });
 
   const deleteHandler = () => {
-    mutate();
+    mutate({ id: id });
   };
+
+  let content;
+
+  if (isPending) {
+    content = (
+      <div id="event-details-content" className="center">
+        <p>Fetching event data...</p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    <div id="event-details-content" className="center">
+      <ErrorBlock
+        title="An error occurred"
+        message={error.info?.message || "Failed to fetch events."}
+      />
+    </div>;
+  }
+
+  if (data) {
+    const formattedDate = new Date(data.date).toLocaleDateString("kr-KO", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+
+    content = (
+      <>
+        <header>
+          <h1>{data.title}</h1>
+          <nav>
+            <button onClick={deleteHandler}>Delete</button>
+            <Link to="edit">Edit</Link>
+          </nav>
+        </header>
+        <div id="event-details-content">
+          <img src={`http://localhost:3000/${data.image}`} alt={data.title} />
+          <div id="event-details-info">
+            <div>
+              <p id="event-details-location">{data.location}</p>
+              <time dateTime={`Todo-DateT$Todo-Time`}>
+                {formattedDate} @ {data.time}
+              </time>
+            </div>
+            <p id="event-details-description">{data.description}</p>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -36,34 +86,8 @@ export default function EventDetails() {
           View all Events
         </Link>
       </Header>
-      {isPending && <LoadingIndicator />}
-      {!isPending && data && (
-        <article id="event-details">
-          <header>
-            <h1>{data.title}</h1>
-            <nav>
-              <button onClick={deleteHandler}>Delete</button>
-              <Link to="edit">Edit</Link>
-            </nav>
-          </header>
-          <div id="event-details-content">
-            <img src={`http://localhost:3000/${data.image}`} alt="" />
-            <div id="event-details-info">
-              <div>
-                <p id="event-details-location">{data.location}</p>
-                <time dateTime={`Todo-DateT$Todo-Time`}>{data.time}</time>
-              </div>
-              <p id="event-details-description">{data.description}</p>
-            </div>
-          </div>
-        </article>
-      )}
-      {isError && (
-        <ErrorBlock
-          title="An error occurred"
-          message={error.info?.message || "Failed to fetch events."}
-        />
-      )}
+
+      <article id="event-details">{content}</article>
     </>
   );
 }
